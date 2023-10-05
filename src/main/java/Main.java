@@ -9,25 +9,17 @@ public class Main {
 
 
 
-  public static void main(String[] args) throws SocketException, UnknownHostException, JSONException {
+  public static void main(String[] args) throws Exception {
     System.out.println("Hello Andrew Panzone");
     int asn = Integer.parseInt(args[0]);
 
-    ArrayList<Router> routers = new ArrayList<>();
+    ArrayList<String> routers = new ArrayList<>();
     for(int i=1; i<args.length; i++){
-      routers.add(new Router(args[i]));
+      routers.add(args[i]);
     }
 
-
-    while (true) {
-
-    }
-
-
-
-
-
-
+    Router r = new Router(asn, routers);
+    r.run();
   }
 
 
