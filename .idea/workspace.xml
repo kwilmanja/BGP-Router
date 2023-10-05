@@ -4,9 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="09ed3e61-29a4-43c6-ba90-7fd421d2feea" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Main.java" afterDir="false" />
+    <list default="true" id="09ed3e61-29a4-43c6-ba90-7fd421d2feea" name="Changes" comment="Added a message">
+      <change afterPath="$PROJECT_DIR$/.idea/libraries/java_json.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/Router.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/RouterType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/java-json.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Main.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -17,6 +21,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Class" />
+        <option value="Enum" />
       </list>
     </option>
   </component>
@@ -31,15 +36,27 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="project.structure.last.edited" value="Modules" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/src/main/resources/java-json.jar" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
+    <property name="project.structure.last.edited" value="Libraries" />
     <property name="project.structure.proportion" value="0.15" />
-    <property name="project.structure.side.proportion" value="0.0" />
+    <property name="project.structure.side.proportion" value="0.26806834" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\winni\OneDrive\Desktop\Networks\BGP-Router\src\main\resources" />
+    </key>
   </component>
   <component name="RunManager">
     <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="Main" />
       <module name="BGP-Router" />
+      <option name="PROGRAM_PARAMETERS" value="7 7833-1.2.3.2-cust 2374-192.168.0.2-peer 1293-67.32.9.2-prov" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -58,8 +75,17 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1696436069170</updated>
-      <workItem from="1696436071582" duration="319000" />
+      <workItem from="1696436071582" duration="2701000" />
+      <workItem from="1696528535245" duration="758000" />
     </task>
+    <task id="LOCAL-00001" summary="Added a message">
+      <created>1696436552797</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1696436552797</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -75,5 +101,10 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Added a message" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added a message" />
   </component>
 </project>
