@@ -4,13 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="09ed3e61-29a4-43c6-ba90-7fd421d2feea" name="Changes" comment="Added a message">
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/java_json.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/Router.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/RouterType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/java-json.jar" afterDir="false" />
+    <list default="true" id="09ed3e61-29a4-43c6-ba90-7fd421d2feea" name="Changes" comment="Parse command line args">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Router.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Router.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,7 +73,7 @@
       <option name="presentableId" value="Default" />
       <updated>1696436069170</updated>
       <workItem from="1696436071582" duration="2701000" />
-      <workItem from="1696528535245" duration="758000" />
+      <workItem from="1696528535245" duration="7507000" />
     </task>
     <task id="LOCAL-00001" summary="Added a message">
       <created>1696436552797</created>
@@ -85,7 +82,14 @@
       <option name="project" value="LOCAL" />
       <updated>1696436552797</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Parse command line args">
+      <created>1696529568195</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1696529568195</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -105,6 +109,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Added a message" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added a message" />
+    <MESSAGE value="Parse command line args" />
+    <option name="LAST_COMMIT_MESSAGE" value="Parse command line args" />
   </component>
 </project>
