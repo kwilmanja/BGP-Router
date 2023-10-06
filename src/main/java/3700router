@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Need classpath to be explicitly mentioned to include required jar files
+CLASSPATH=.:java-json.jar
+# Invoking the entrypoint file mainfile
+# $@ represents all the command-line arguments passed to the script when it is executed.
+#java -classpath "$CLASSPATH" Main.java "$@"
+java -classpath "$CLASSPATH" Main.java "$@"
+
+chmod a+x 3700router
