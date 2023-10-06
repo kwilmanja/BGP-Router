@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -45,14 +46,11 @@ public class Main {
 
     private final Selector selector = Selector.open();
 
-    private final Map<String, DatagramSocket> sockets = new HashMap<>();
+    private final Map<String, DatagramChannel> channels = new HashMap<>();
     private final Map<String, Relation> relations = new HashMap<>();
     private final ArrayList<String> networks = new ArrayList<>();
-//    private final NetUtil netUtil = new NetUtil();
 
     public Router(int asn, ArrayList<String> routerStrings) throws Exception {
-
-      System.out.println("Start");
 
       this.asn = asn;
 
@@ -64,10 +62,9 @@ public class Main {
 
         this.relations.put(ip, Relation.of(strs[2]));
         DatagramChannel dc = DatagramChannel.open();
-
-        DatagramSocket ds = new DatagramSocket();
-        ds.connect(InetAddress.getByName("localhost"), port);
-        this.sockets.put(ip, ds);
+        dc.connect(new InetSocketAddress(InetAddress.getByName("localhost"), port));
+        this.channels.put(ip, dc);
+        this.networks.add(ip);
 
       }
 
@@ -76,9 +73,9 @@ public class Main {
     }
 
 
-    private void registerDataChannelSelector() throws ClosedChannelException {
-      for(DatagramSocket ds : this.sockets.values()){
-        DatagramChannel dc = ds.getChannel();
+    private void registerDataChannelSelector() throws IOException {
+      for(DatagramChannel dc : this.channels.values()){
+        dc.configureBlocking(false);
         dc.register(selector, SelectionKey.OP_READ);
       }
     }
@@ -90,17 +87,30 @@ public class Main {
         handshake.put("dst", ip);
         handshake.put("type", "handshake");
         handshake.put("msg", new JSONObject());
-        NetUtil.sendMessage(this.sockets.get(ip), handshake);
-      }
 
+        NetUtil.sendMessage(handshake, this.channels.get(ip));
+      }
     }
 
-    public void run() throws IOException {
+    public String getOurIP(String ip){
+      return ip.substring(0, ip.length()-1) + "1";
+    }
 
-      ByteBuffer buffer = ByteBuffer.allocate(1024);
+    public String getIPFromChannel(DatagramChannel dc) throws Exception {
+      for(Map.Entry<String, DatagramChannel> e : this.channels.entrySet()){
+        if(e.getValue().equals(dc)){
+          return e.getKey();
+        }
+      }
+      throw new Exception("Could not find key for channel!");
+    }
 
+
+    public void run() throws Exception {
 
       while(true){
+
+
         int readyChannels = selector.select();
         if (readyChannels == 0) {
           continue;
@@ -112,17 +122,25 @@ public class Main {
           SelectionKey selectedKey = keyIterator.next();
 
           if (selectedKey.isReadable()) {
-            DatagramChannel datagramChannel = (DatagramChannel) selectedKey.channel();
-            buffer.clear();
+            DatagramChannel dc = (DatagramChannel) selectedKey.channel();
+            JSONObject recieved = NetUtil.recieveMessage(dc);
 
-            SocketAddress senderAddress = datagramChannel.receive(buffer);
+            switch (recieved.getString("type")){
+              case "update":
+                this.handleUpdate(recieved, dc);
+                break;
+              case "withdraw":
+                break;
+              case "data":
+                break;
+              case "no route":
+                break;
+              case "dump":
+                break;
+              default:
+                throw new Exception("Message type not valid!");
+            }
 
-            buffer.flip();
-            byte[] data = new byte[buffer.limit()];
-            buffer.get(data);
-
-            String message = new String(data, StandardCharsets.UTF_8);
-            System.out.println("Received from " + senderAddress + ": " + message);
           }
 
           keyIterator.remove();
@@ -130,11 +148,49 @@ public class Main {
       }
     }
 
+    private void handleUpdate(JSONObject update, DatagramChannel dc) throws Exception {
+
+      //Save a Copy:
+
+      //Update Routing Table:
+
+      //Build Forward Message:
+
+      if(update.isNull("localpref")){
+        throw new Exception("Failed");
+      }
+
+      JSONObject toSend = new JSONObject();
+      toSend.put("type", "update");
+      JSONObject msg = new JSONObject(update);
+      msg.remove("localpref");
+      msg.remove("selfOrigin");
+      msg.remove("origin");
+      toSend.put("msg", msg);
 
 
-    public String getOurIP(String ip){
-      return ip.substring(0, ip.length()-1) + "1";
+      //Send Forward Message:
+
+      String originIP = this.getIPFromChannel(dc);
+      Relation originR = this.relations.get(originIP);
+
+      for(String ip : this.networks){
+
+        Relation r = this.relations.get(ip);
+        DatagramChannel sendOn = this.channels.get(ip);
+
+        if (!ip.equals(originIP) &&
+                (originR.equals(Relation.CUST) || r.equals(Relation.CUST))){
+          toSend.put("src", this.getOurIP(ip));
+          toSend.put("dst", ip);
+          NetUtil.sendMessage(toSend, sendOn);
+        }
+      }
+
+
     }
+
+
 
 
   }
@@ -150,11 +206,25 @@ public class Main {
 
   public static class NetUtil {
 
-    public static void sendMessage(DatagramSocket sock, JSONObject obj) throws IOException {
-      byte[] data = obj.toString().getBytes();
+    public static JSONObject recieveMessage(DatagramChannel dc) throws IOException, JSONException {
+      ByteBuffer buffer = ByteBuffer.allocate(1024);
+      buffer.clear();
 
-      DatagramPacket packet = new DatagramPacket(data, data.length, sock.getInetAddress(), sock.getPort());
-      sock.send(packet);
+      SocketAddress senderAddress = dc.receive(buffer);
+
+      buffer.flip();
+      byte[] data = new byte[buffer.limit()];
+      buffer.get(data);
+
+      String messageStr = new String(data, StandardCharsets.UTF_8);
+      System.out.println("Received from " + senderAddress + ": " + messageStr);
+      return new JSONObject(messageStr);
+    }
+
+    public static void sendMessage(JSONObject msg, DatagramChannel dc) throws IOException {
+      byte[] messageBytes = msg.toString().getBytes(StandardCharsets.UTF_8);
+      ByteBuffer buffer = ByteBuffer.wrap(messageBytes);
+      dc.write(buffer);
     }
 
   }
