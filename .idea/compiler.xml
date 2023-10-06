@@ -9,5 +9,8 @@
         <module name="BGP-Router" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="BGP-Router" target="14" />
+    </bytecodeTargetLevel>
   </component>
 </project>
