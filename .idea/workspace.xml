@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="09ed3e61-29a4-43c6-ba90-7fd421d2feea" name="Changes" comment="Build message handling framework and start on handleUpdate()">
+    <list default="true" id="09ed3e61-29a4-43c6-ba90-7fd421d2feea" name="Changes" comment="Begin work on route table">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Main.java" afterDir="false" />
     </list>
@@ -24,6 +24,14 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitSEFilterConfiguration">
+    <file-type-list>
+      <filtered-out-file-type name="LOCAL_BRANCH" />
+      <filtered-out-file-type name="REMOTE_BRANCH" />
+      <filtered-out-file-type name="TAG" />
+      <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
+    </file-type-list>
+  </component>
   <component name="ProjectId" id="2WJ1rJpzxu7Z68PqWD5zJM3umJl" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -34,7 +42,7 @@
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/src/main/resources/java-json.jar" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../bgp-router-starter-code-main" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
@@ -73,7 +81,8 @@
       <option name="presentableId" value="Default" />
       <updated>1696436069170</updated>
       <workItem from="1696436071582" duration="2701000" />
-      <workItem from="1696528535245" duration="32126000" />
+      <workItem from="1696528535245" duration="33034000" />
+      <workItem from="1696966542545" duration="2426000" />
     </task>
     <task id="LOCAL-00001" summary="Added a message">
       <created>1696436552797</created>
@@ -124,7 +133,14 @@
       <option name="project" value="LOCAL" />
       <updated>1696611548973</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Begin work on route table">
+      <created>1696905018782</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1696905018782</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -148,6 +164,7 @@
     <MESSAGE value="more work" />
     <MESSAGE value="DatagramSocket implementation" />
     <MESSAGE value="Build message handling framework and start on handleUpdate()" />
-    <option name="LAST_COMMIT_MESSAGE" value="Build message handling framework and start on handleUpdate()" />
+    <MESSAGE value="Begin work on route table" />
+    <option name="LAST_COMMIT_MESSAGE" value="Begin work on route table" />
   </component>
 </project>

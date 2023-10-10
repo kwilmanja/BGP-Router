@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -87,7 +88,7 @@ class Router {
   private final ArrayList<String> networks = new ArrayList<>();
 
 //  private ArrayList<Route> routeTable;
-  private ArrayList<JSONObject> messages;
+  private final ArrayList<JSONObject> messages = new ArrayList<>();
 
   public Router(int asn, ArrayList<String> routerStrings) throws Exception {
 
@@ -111,7 +112,6 @@ class Router {
     this.sendHandshakes();
     this.registerDataChannelSelector();
   }
-
 
   private void registerDataChannelSelector() throws IOException {
     for(DatagramChannel dc : this.channels.values()){
@@ -169,15 +169,16 @@ class Router {
             case "update":
             case "withdraw":
               this.forwardUpdateWithdraw(received, dc);
-              this.storeUpdateWithdraw(received, dc);
+              //this.storeUpdateWithdraw(received, dc);
               break;
             case "data":
-              break;
+              return;
             case "no route":
-              break;
+              return;
             case "dump":
               this.handleDump(dc);
-              break;
+              throw new Exception("dump ended");
+//              break;
             default:
               throw new Exception("Message type not valid!");
           }
@@ -232,9 +233,14 @@ class Router {
     JSONObject msgSend = new JSONObject();
     msgSend.put("network", msgReceived.getString("network"));
     msgSend.put("netmask", msgReceived.getString("netmask"));
-    JSONArray aspath = msgReceived.getJSONArray("ASPath");
-    aspath.put(0, this.asn);
-    msgSend.put("ASPath", aspath);
+
+    JSONArray asPath = new JSONArray();
+    asPath.put(this.asn);
+    JSONArray oldASPath = msgReceived.getJSONArray("ASPath");
+    for(int i=0; i<oldASPath.length(); i++){
+      asPath.put(oldASPath.get(i));
+    }
+    msgSend.put("ASPath", asPath);
 
     toSend.put("msg", msgSend);
 
@@ -261,7 +267,23 @@ class Router {
 
   }
 
+}
 
 
+
+class RoutingTable{
+
+  public final ArrayList<Route> routes = new ArrayList<>();
+  public final ArrayList<JSONObject> messages = new ArrayList<>();
+
+  public RoutingTable(){
+
+  }
+
+
+
+}
+
+class Route{
 
 }
