@@ -167,9 +167,9 @@ class Router {
             case "update":
             case "withdraw":
               this.forwardUpdateWithdraw(received, dc);
-              String ip = this.getIPFromChannel(dc);
-              received.put("peer", ip);
-              received.put("peerRelation", this.relations.get(ip));
+//              String ip = this.getIPFromChannel(dc);
+//              received.put("peer", ip);
+//              received.put("peerRelation", this.relations.get(ip));
               this.routeTable.addMessage(received);
               break;
             case "data":
@@ -189,6 +189,7 @@ class Router {
     }
   }
 
+  //ToDo: Check if it is a legal route to send on
   private void forwardData(JSONObject received) throws JSONException, IOException {
     String dstIP = received.getString("dst");
     String peerIP = this.routeTable.query(dstIP);
@@ -268,6 +269,7 @@ class RoutingTable{
 
   public RoutingTable(){}
 
+  //ToDo: update routing table better
   public void addMessage(JSONObject message) throws JSONException {
     messages.add(message);
     if(message.getString("type").equals("update")){
@@ -285,6 +287,7 @@ class RoutingTable{
     return ja;
   }
 
+  //ToDo: Better algo for choosing route
   public String query(String dstIP){
     ArrayList<Route> matches = new ArrayList<>();
 
@@ -293,6 +296,10 @@ class RoutingTable{
         matches.add(r);
       }
     }
+
+
+
+
 
 
 
@@ -333,7 +340,7 @@ class Route{
 
     this.network = msg.getString("network");
     this.netmask = msg.getString("netmask");
-    this.peer = update.getString("peer");
+    this.peer = update.getString("src");
     this.localPref = msg.getInt("localpref");
     this.selfOrigin = msg.getBoolean("selfOrigin");
     this.asPath = new ArrayList<>();
@@ -357,14 +364,10 @@ class Route{
   }
 
   public boolean containsNetwork(String dstIP){
-
-
-  }
-
-  public String getNetworkWithNetmask(){
-    IPAddress.netmaskToInt(this.netmask);
-
-    return "";
+    int nm = IPAddress.netmaskToInt(this.netmask);
+    String binaryNetwork = IPAddress.ipAddressToBinary(this.network);
+    String binaryDst = IPAddress.ipAddressToBinary(dstIP);
+    return binaryNetwork.startsWith(binaryDst.substring(0, nm));
   }
 
 }
