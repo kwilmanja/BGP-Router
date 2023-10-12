@@ -87,13 +87,12 @@ class Router {
   private final Map<String, Relation> relations = new HashMap<>();
   private final ArrayList<String> networks = new ArrayList<>();
 
-//  private ArrayList<Route> routeTable;
-  private final ArrayList<JSONObject> messages = new ArrayList<>();
+  private RoutingTable routeTable;
 
   public Router(int asn, ArrayList<String> routerStrings) throws Exception {
 
     this.asn = asn;
-//    this.routeTable = new ArrayList<>();
+    this.routeTable = new RoutingTable();
 
     for (String routerString: routerStrings){
       String[] strs = routerString.split("-");
@@ -106,7 +105,6 @@ class Router {
       dc.connect(new InetSocketAddress(InetAddress.getByName("localhost"), port));
       this.channels.put(ip, dc);
       this.networks.add(ip);
-
     }
 
     this.sendHandshakes();
@@ -169,16 +167,17 @@ class Router {
             case "update":
             case "withdraw":
               this.forwardUpdateWithdraw(received, dc);
-              //this.storeUpdateWithdraw(received, dc);
+              String ip = this.getIPFromChannel(dc);
+              received.put("peer", ip);
+              received.put("peerRelation", this.relations.get(ip));
+              this.routeTable.addMessage(received);
               break;
             case "data":
-              return;
-            case "no route":
-              return;
+              this.forwardData(received);
+              break;
             case "dump":
               this.handleDump(dc);
-              throw new Exception("dump ended");
-//              break;
+              break;
             default:
               throw new Exception("Message type not valid!");
           }
@@ -190,8 +189,14 @@ class Router {
     }
   }
 
-  private void handleDump(DatagramChannel dc) throws Exception {
+  private void forwardData(JSONObject received) throws JSONException, IOException {
+    String dstIP = received.getString("dst");
+    String peerIP = this.routeTable.query(dstIP);
+    DatagramChannel dc = this.channels.get(peerIP);
+    Main.NetUtil.sendMessage(received, dc);
+  }
 
+  private void handleDump(DatagramChannel dc) throws Exception {
     JSONObject toSend = new JSONObject();
     toSend.put("type", "table");
 
@@ -199,25 +204,10 @@ class Router {
     toSend.put("src", this.getOurIP(neighborIP));
     toSend.put("dst", neighborIP);
 
-    JSONArray msg = this.routingTableToJSON();
+    JSONArray msg = this.routeTable.getTableJSON();
     toSend.put("msg", msg);
 
     Main.NetUtil.sendMessage(toSend, dc);
-  }
-
-  private JSONArray routingTableToJSON(){
-    JSONArray rt = new JSONArray();
-
-    return rt;
-  }
-
-  private void BuildRoutingTableFromMessages(){
-
-  }
-
-  private void storeUpdateWithdraw(JSONObject update, DatagramChannel dc){
-    //Update Routing Table:
-    this.messages.add(update);
   }
 
   private void forwardUpdateWithdraw(JSONObject update, DatagramChannel dc) throws Exception {
@@ -276,14 +266,130 @@ class RoutingTable{
   public final ArrayList<Route> routes = new ArrayList<>();
   public final ArrayList<JSONObject> messages = new ArrayList<>();
 
-  public RoutingTable(){
+  public RoutingTable(){}
 
+  public void addMessage(JSONObject message) throws JSONException {
+    messages.add(message);
+    if(message.getString("type").equals("update")){
+      this.routes.add(new Route(message));
+    } else if(message.getString("type").equals("withdraw")){
+      //Do something :)
+    }
   }
+
+  public JSONArray getTableJSON() throws JSONException {
+    JSONArray ja = new JSONArray();
+    for(Route r : this.routes){
+      ja.put(r.asJSON());
+    }
+    return ja;
+  }
+
+  public String query(String dstIP){
+    ArrayList<Route> matches = new ArrayList<>();
+
+    for(Route r : this.routes){
+      if(r.containsNetwork(dstIP)){
+        matches.add(r);
+      }
+    }
+
+
+
+
+    return "";
+  }
+
+
+
 
 
 
 }
 
 class Route{
+
+  public String network;
+  public String netmask;
+  public String peer;
+  public int localPref;
+  public boolean selfOrigin;
+  public ArrayList<Integer> asPath;
+  public String origin;
+
+  public Route(String network, String netmask, String peer,
+               int localPref, boolean selfOrigin, ArrayList<Integer> asPath, String origin){
+    this.network = network;
+    this.netmask = netmask;
+    this.peer = peer;
+    this.localPref = localPref;
+    this.selfOrigin = selfOrigin;
+    this.asPath = asPath;
+    this.origin = origin;
+  }
+
+  public Route(JSONObject update) throws JSONException {
+    JSONObject msg = update.getJSONObject("msg");
+
+    this.network = msg.getString("network");
+    this.netmask = msg.getString("netmask");
+    this.peer = update.getString("peer");
+    this.localPref = msg.getInt("localpref");
+    this.selfOrigin = msg.getBoolean("selfOrigin");
+    this.asPath = new ArrayList<>();
+    JSONArray oldASPath = msg.getJSONArray("ASPath");
+    for(int i=0; i<oldASPath.length(); i++){
+      this.asPath.add(oldASPath.getInt(i));
+    }
+    this.origin = msg.getString("origin");
+  }
+
+  public JSONObject asJSON() throws JSONException {
+    JSONObject route = new JSONObject();
+    route.put("network", this.network);
+    route.put("netmask", this.netmask);
+    route.put("peer", this.peer);
+    route.put("localpref", this.localPref);
+    route.put("ASPath", new JSONArray(this.asPath));
+    route.put("selfOrigin", this.selfOrigin);
+    route.put("origin", this.origin);
+    return route;
+  }
+
+  public boolean containsNetwork(String dstIP){
+
+
+  }
+
+  public String getNetworkWithNetmask(){
+    IPAddress.netmaskToInt(this.netmask);
+
+    return "";
+  }
+
+}
+
+class IPAddress{
+
+  // 255.255.255.255 -> 32
+  public static int netmaskToInt(String netmask){
+    int result = 0;
+    String[] netmaskSplit = netmask.split(".");
+    for(int i=0; i<netmaskSplit.length; i++){
+      int n = Integer.parseInt(netmaskSplit[i]);
+      String bn = Integer.toBinaryString(n);
+      while(bn.startsWith("1")){
+        result++;
+        bn = bn.substring(1);
+      }
+    }
+    return result;
+  }
+
+  //ToDo
+  // 255.255.255.255 -> 11111111111111111111111111111111
+  public static String ipAddressToBinary(String network){
+    return "";
+  }
 
 }
