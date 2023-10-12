@@ -391,8 +391,27 @@ class IPAddress{
 
   //ToDo
   // 255.255.255.255 -> 11111111111111111111111111111111
-  public static String ipAddressToBinary(String network){
-    return "";
+  public static String ipAddressToBinary(String network) {
+    String[] parts = network.split(".");
+    if (parts.length != 4) {
+      throw new IllegalArgumentException("Invalid IP format");
+    }
+
+    StringBuilder binaryIP = new StringBuilder();
+
+    for (String part : parts) {
+      int value = Integer.parseInt(part);
+      if (value < 0 || value > 255) {
+        throw new IllegalArgumentException("Invalid IP value");
+      }
+
+      // Convert the value to an 8-bit binary representation
+      String binaryPart = String.format("%8s", Integer.toBinaryString(value)).replace(' ', '0');
+      binaryIP.append(binaryPart);
+    }
+
+    return binaryIP.toString();
   }
+
 
 }
