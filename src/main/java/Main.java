@@ -288,12 +288,15 @@ class RoutingTable{
   public RoutingTable(){}
 
   //ToDo: update routing table better
-  public void addMessage(JSONObject message) throws JSONException {
-    messages.add(message);
+  public void addMessage(JSONObject message) throws Exception {
+    this.messages.add(message);
     if(message.getString("type").equals("update")){
       this.routes.add(new Route(message));
     } else if(message.getString("type").equals("withdraw")){
       //Do something :)
+    } else{
+      throw new Exception("message not an update or withdraw");
+
     }
   }
 
@@ -348,22 +351,19 @@ class RoutingTable{
 
     if(bestMatch.size() == 1){
       return Optional.of(bestMatch.get(0).peer);
-    } else{
-      bestMatch = new ArrayList<>();
+    } else if (bestMatch.size() > 1){
+      matches = new ArrayList<>(bestMatch);
     }
 
+      bestMatch = new ArrayList<>();
     //SELF ORIGIN
 
 
 
 
 
-    return Optional.of("");
+    return Optional.empty();
   }
-
-
-
-
 
 
 }
@@ -435,7 +435,7 @@ class IPAddress{
   // 255.255.255.255 -> 32
   public static int netmaskToInt(String netmask){
     int result = 0;
-    String[] netmaskSplit = netmask.split(".");
+    String[] netmaskSplit = netmask.split("\\.");
     for(int i=0; i<netmaskSplit.length; i++){
       int n = Integer.parseInt(netmaskSplit[i]);
       String bn = Integer.toBinaryString(n);
@@ -450,9 +450,11 @@ class IPAddress{
   //ToDo
   // 255.255.255.255 -> 11111111111111111111111111111111
   public static String ipAddressToBinary(String network) {
-    String[] parts = network.split(".");
+
+    String[] parts = network.split("\\.");
+
     if (parts.length != 4) {
-      throw new IllegalArgumentException("Invalid IP format");
+      throw new IllegalArgumentException("Invalid IP format" + network);
     }
 
     StringBuilder binaryIP = new StringBuilder();
