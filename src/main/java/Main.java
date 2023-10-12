@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 public class Main {
 
@@ -173,7 +174,7 @@ class Router {
               this.routeTable.addMessage(received);
               break;
             case "data":
-              this.forwardData(received);
+              this.forwardData(received, dc);
               break;
             case "dump":
               this.handleDump(dc);
@@ -190,11 +191,28 @@ class Router {
   }
 
   //ToDo: Check if it is a legal route to send on
-  private void forwardData(JSONObject received) throws JSONException, IOException {
+  private void forwardData(JSONObject received, DatagramChannel receivedOn) throws JSONException, IOException {
+    JSONObject toSend;
+    DatagramChannel sendOn;
+
     String dstIP = received.getString("dst");
-    String peerIP = this.routeTable.query(dstIP);
-    DatagramChannel dc = this.channels.get(peerIP);
-    Main.NetUtil.sendMessage(received, dc);
+    Optional<String> peerIP = this.routeTable.query(dstIP);
+
+    if(peerIP.isPresent()){
+      // a route was found to forward the data
+      toSend = received;
+      sendOn = this.channels.get(peerIP.get());
+    } else {
+      // no route was found to forward the data
+      toSend = new JSONObject();
+      toSend.put("type", "no route");
+      toSend.put("src", received.getString("src"));
+      toSend.put("dst", received.getString("dst"));
+      toSend.put("msg", new JSONObject());
+      sendOn = receivedOn;
+    }
+
+    Main.NetUtil.sendMessage(toSend, sendOn);
   }
 
   private void handleDump(DatagramChannel dc) throws Exception {
@@ -288,23 +306,59 @@ class RoutingTable{
   }
 
   //ToDo: Better algo for choosing route
-  public String query(String dstIP){
+  public Optional<String> query(String dstIP){
     ArrayList<Route> matches = new ArrayList<>();
+
+    int bestNetmask = 0;
 
     for(Route r : this.routes){
       if(r.containsNetwork(dstIP)){
-        matches.add(r);
+        int rNetmask = r.getNetmaskInt();
+        if(rNetmask == bestNetmask){
+          matches.add(r);
+        } else if (rNetmask > bestNetmask){
+          matches = new ArrayList<>();
+          matches.add(r);
+          bestNetmask = rNetmask;
+        }
       }
     }
 
+    if(matches.isEmpty()){
+      return Optional.empty();
+    } else if(matches.size() == 1){
+      return Optional.of(matches.get(0).peer);
+    }
+
+
+    ArrayList<Route> bestMatch = new ArrayList<>();
+
+
+    //LOCAL PREF
+    int bestLocalPref = 0;
+    for(Route r : matches){
+      if(r.localPref == bestLocalPref){
+        bestMatch.add(r);
+      } else if (r.localPref > bestLocalPref){
+        bestMatch = new ArrayList<>();
+        bestMatch.add(r);
+        bestLocalPref = r.localPref;
+      }
+    }
+
+    if(bestMatch.size() == 1){
+      return Optional.of(bestMatch.get(0).peer);
+    } else{
+      bestMatch = new ArrayList<>();
+    }
+
+    //SELF ORIGIN
 
 
 
 
 
-
-
-    return "";
+    return Optional.of("");
   }
 
 
@@ -368,6 +422,10 @@ class Route{
     String binaryNetwork = IPAddress.ipAddressToBinary(this.network);
     String binaryDst = IPAddress.ipAddressToBinary(dstIP);
     return binaryNetwork.startsWith(binaryDst.substring(0, nm));
+  }
+
+  public int getNetmaskInt(){
+    return IPAddress.netmaskToInt(this.netmask);
   }
 
 }
