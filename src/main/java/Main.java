@@ -380,14 +380,82 @@ class RoutingTable{
       matches = new ArrayList<>(bestMatch);
     }
 
-      bestMatch = new ArrayList<>();
+    bestMatch = new ArrayList<>();
+
     //SELF ORIGIN
+    for(Route r : matches){
+      if(r.selfOrigin == true){
+        bestMatch.add(r);
+      }
+    }
 
+    if(bestMatch.size() == 1){
+      return Optional.of(bestMatch.get(0).peer);
+    } else if (bestMatch.size() > 1){
+      matches = new ArrayList<>(bestMatch);
+    }
 
+    bestMatch = new ArrayList<>();
 
+    // ASPath
+    int shortestASPath = matches.get(0).asPath.size();
 
+    for(Route r : matches) {
+      int currASPathSize = r.asPath.size();
+      if (currASPathSize < shortestASPath) {
+        shortestASPath = currASPathSize;
+        bestMatch = new ArrayList<>();
+        bestMatch.add(r);
+      } else if (currASPathSize == shortestASPath) {
+        bestMatch.add(r);
+      }
+    }
 
+    if(bestMatch.size() == 1){
+      return Optional.of(bestMatch.get(0).peer);
+    } else if (bestMatch.size() > 1){
+      matches = new ArrayList<>(bestMatch);
+    }
 
+    // Origin
+    String bestOrigin = "UNK";
+    for(Route r : matches){
+      if(r.origin == bestOrigin){
+        bestMatch.add(r);
+      } else if (r.origin == "IGP") {
+        bestMatch = new ArrayList<>();
+        bestMatch.add(r);
+        bestOrigin = "IGP";
+      } else if (bestOrigin != "IGP" && r.origin == "EGP") {
+        bestMatch = new ArrayList<>();
+        bestMatch.add(r);
+        bestOrigin = "EGP";
+      }
+    }
+
+    if(bestMatch.size() == 1){
+      return Optional.of(bestMatch.get(0).peer);
+    } else if (bestMatch.size() > 1){
+      matches = new ArrayList<>(bestMatch);
+    }
+
+    bestMatch = new ArrayList<>();
+
+    // LowestIP
+    int lowestIP = Integer.parseInt(IPAddress.ipAddressToBinary(matches.get(0).peer), 2);
+
+    for(Route r : matches){
+      int currIP = Integer.parseInt(IPAddress.ipAddressToBinary(r.peer), 2);
+      if(currIP < lowestIP || currIP == lowestIP){
+        bestMatch = new ArrayList<>();
+        bestMatch.add(r);
+        lowestIP = currIP;
+      }
+    }
+
+    if(bestMatch.size() == 1){
+      return Optional.of(bestMatch.get(0).peer);
+    }
 
     return Optional.empty();
   }
