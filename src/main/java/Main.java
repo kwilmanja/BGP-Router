@@ -233,25 +233,30 @@ class Router {
 
     //Build Forward Message:
     JSONObject toSend = new JSONObject();
+
     if(update.getString("type").equals("update")){
       toSend.put("type", "update");
+      JSONObject msgReceived = update.getJSONObject("msg");
+
+      JSONObject msgSend = new JSONObject();
+      msgSend.put("network", msgReceived.getString("network"));
+      msgSend.put("netmask", msgReceived.getString("netmask"));
+
+      JSONArray asPath = new JSONArray();
+      asPath.put(this.asn);
+      JSONArray oldASPath = msgReceived.getJSONArray("ASPath");
+      for(int i=0; i<oldASPath.length(); i++){
+        asPath.put(oldASPath.get(i));
+      }
+
+      msgSend.put("ASPath", asPath);
+      toSend.put("msg", msgSend);
+
     } else if(update.getString("type").equals("withdraw")){
       toSend.put("type", "withdraw");
+      toSend.put("msg", update.getJSONArray("msg"));
     }
-    JSONObject msgReceived = update.getJSONObject("msg");
-    JSONObject msgSend = new JSONObject();
-    msgSend.put("network", msgReceived.getString("network"));
-    msgSend.put("netmask", msgReceived.getString("netmask"));
 
-    JSONArray asPath = new JSONArray();
-    asPath.put(this.asn);
-    JSONArray oldASPath = msgReceived.getJSONArray("ASPath");
-    for(int i=0; i<oldASPath.length(); i++){
-      asPath.put(oldASPath.get(i));
-    }
-    msgSend.put("ASPath", asPath);
-
-    toSend.put("msg", msgSend);
 
 
     //Send Forward Message:
@@ -287,13 +292,33 @@ class RoutingTable{
 
   public RoutingTable(){}
 
+  private void handleRouteWithdraw(JSONObject received) throws JSONException {
+    String peer = received.getString("src");
+    JSONArray msg = received.getJSONArray("msg");
+    for(int i=0; i<msg.length(); i++){
+      JSONObject obj = msg.getJSONObject(i);
+      String network = obj.getString("network");
+      String netmask = obj.getString("netmask");
+
+      ArrayList<Route> toRemove = new ArrayList<>();
+
+      for(Route r : this.routes){
+        if(r.peer.equals(peer) && r.network.equals(network) && r.netmask.equals(netmask)){
+          toRemove.add(r);
+        }
+      }
+
+      this.routes.removeAll(toRemove);
+    }
+  }
+
   //ToDo: update routing table better
-  public void addMessage(JSONObject message) throws Exception {
-    this.messages.add(message);
-    if(message.getString("type").equals("update")){
-      this.routes.add(new Route(message));
-    } else if(message.getString("type").equals("withdraw")){
-      //Do something :)
+  public void addMessage(JSONObject received) throws Exception {
+    this.messages.add(received);
+    if(received.getString("type").equals("update")){
+      this.routes.add(new Route(received));
+    } else if(received.getString("type").equals("withdraw")){
+      this.handleRouteWithdraw(received);
     } else{
       throw new Exception("message not an update or withdraw");
 
@@ -357,6 +382,8 @@ class RoutingTable{
 
       bestMatch = new ArrayList<>();
     //SELF ORIGIN
+
+
 
 
 
