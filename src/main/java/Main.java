@@ -345,15 +345,29 @@ class RoutingTable{
   //Aggregate the two routes if possible
   public static Optional<Route> aggregateRoutes(Route r1, Route r2){
 
+    String binR1 = IPAddress.ipAddressToBinary(r1.network);
+    String binR2 = IPAddress.ipAddressToBinary(r2.network);
+
+    int nmR1 = IPAddress.netmaskToInt(r1.netmask);
+    int nmR2 = IPAddress.netmaskToInt(r2.netmask);
 
 
-    boolean otherSame = (r1.peer.equals(r2.peer)
+    boolean canAgg =
+            binR1.charAt(nmR1-1) == binR2.charAt(nmR2-1)
+            && binR1.substring(0, nmR1-1).equals(binR2.substring(0, nmR2-1))
+            && (r1.peer.equals(r2.peer)
             && r1.localPref == r2.localPref
             && r1.selfOrigin == r2.selfOrigin
             && r1.asPath.equals(r2.asPath)
             && r1.origin.equals(r2.origin));
 
-
+    if(canAgg){
+      String newNet = null;
+      String newMask = null;
+      Route newR = new Route(newNet, newMask, r1.peer, r1.peerRelation,
+              r1.localPref, r1.selfOrigin, r1.asPath, r1.origin);
+      return Optional.of(newR);
+    }
 
     return Optional.empty();
   }
@@ -418,8 +432,6 @@ class RoutingTable{
         }
       }
     }
-
-
 
 
     //return if 0 or 1 matches
@@ -546,11 +558,12 @@ class Route{
   public String peerRelation;
 
   //Manually create a route
-  public Route(String network, String netmask, String peer,
+  public Route(String network, String netmask, String peer, String peerRelation,
                int localPref, boolean selfOrigin, ArrayList<Integer> asPath, String origin){
     this.network = network;
     this.netmask = netmask;
     this.peer = peer;
+    this.peerRelation = peerRelation;
     this.localPref = localPref;
     this.selfOrigin = selfOrigin;
     this.asPath = asPath;
