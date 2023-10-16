@@ -661,5 +661,32 @@ class IPAddress{
     return binaryIP.toString();
   }
 
+  // Convert binary of address to ip
+  // 11111111111111111111111111111111 ->  255.255.255.255
+  public static String binaryToIpAddress(String binaryIP) {
+    if (binaryIP.length() != 32 || !binaryIP.matches("^[01]+$")) {
+      throw new IllegalArgumentException("Invalid binary IP");
+    }
+
+    StringBuilder ipAddress = new StringBuilder();
+    for (int i = 0; i < 4; i++) {
+      int start = i * 8;
+      int end = start + 8;
+      String binaryPart = binaryIP.substring(start, end);
+      int value = Integer.parseInt(binaryPart, 2);
+
+      if (value < 0 || value > 255) {
+        throw new IllegalArgumentException("Invalid binary IP");
+      }
+
+      ipAddress.append(value);
+      if (i < 3) {
+        ipAddress.append(".");
+      }
+    }
+
+    return ipAddress.toString();
+  }
+
 
 }
