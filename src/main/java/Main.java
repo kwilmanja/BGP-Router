@@ -20,9 +20,7 @@ import java.util.Optional;
 
 public class Main {
 
-
-
-
+  //Main method to run the router simulator
   public static void main(String[] args) throws Exception {
     int asn = Integer.parseInt(args[0]);
 
@@ -35,11 +33,12 @@ public class Main {
     r.run();
   }
 
-
 }
 
+//Class for sending/receiving JSON messages over a DatagramChannel
 class NetUtil {
 
+  //Receive the next packet on the DatagramChannel
   public static JSONObject receiveMessage(DatagramChannel dc) throws IOException, JSONException {
     ByteBuffer buffer = ByteBuffer.allocate(1024);
     buffer.clear();
@@ -55,6 +54,7 @@ class NetUtil {
     return new JSONObject(messageStr);
   }
 
+  //Send the JSONObject over the DatagramChannel
   public static void sendMessage(JSONObject msg, DatagramChannel dc) throws IOException {
     byte[] messageBytes = msg.toString().getBytes(StandardCharsets.UTF_8);
     ByteBuffer buffer = ByteBuffer.wrap(messageBytes);
@@ -64,18 +64,23 @@ class NetUtil {
 }
 
 
+//The BGP router that handles relationships with neighboring routers and forwarding data
 class Router {
 
   private final int asn;
 
   private final Selector selector = Selector.open();
 
+  //Map of IP -> associated channel
   private final Map<String, DatagramChannel> channels = new HashMap<>();
+  //Map of IP -> relationship (prov, peer, cust)
   private final Map<String, String> relations = new HashMap<>();
+  //List of all IP's of neighboring routers
   private final ArrayList<String> networks = new ArrayList<>();
-
+  //The routing table that holds all messages and determines where to forward data
   private RoutingTable routeTable;
 
+  //Create a Router form an asn number and list of neighboring routers
   public Router(int asn, ArrayList<String> routerStrings) throws Exception {
 
     this.asn = asn;
@@ -98,6 +103,7 @@ class Router {
     this.registerDataChannelSelector();
   }
 
+  //Register all the channels with the selector
   private void registerDataChannelSelector() throws IOException {
     for(DatagramChannel dc : this.channels.values()){
       dc.configureBlocking(false);
@@ -105,6 +111,7 @@ class Router {
     }
   }
 
+  //Send a handshake to all neighboring routers
   private void sendHandshakes() throws JSONException, IOException {
     for(String ip : this.networks){
       JSONObject handshake = new JSONObject();
@@ -117,10 +124,12 @@ class Router {
     }
   }
 
+  //Get our associated IP given the neighbor's IP
   public String getOurIP(String ip){
     return ip.substring(0, ip.length()-1) + "1";
   }
 
+  //Given a data channel, returns the IP of the neighbor connected to the socket
   public String getIPFromChannel(DatagramChannel dc) throws Exception {
     for(Map.Entry<String, DatagramChannel> e : this.channels.entrySet()){
       if(e.getValue().equals(dc)){
@@ -131,10 +140,10 @@ class Router {
   }
 
 
+  //Wait for messages and handle them accordingly (update, withdraw, data, dump)
   public void run() throws Exception {
 
     while(true){
-
 
       int readyChannels = selector.select();
       if (readyChannels == 0) {
@@ -175,11 +184,12 @@ class Router {
     }
   }
 
+  //Returns true if the given neighbor is a customer of our router
   private boolean isCust(String ip){
     return this.relations.get(ip).equals("cust");
   }
 
-  //ToDo: Check if it is a legal route to send on
+  //Forwards data down the appropriate route or sends a "no route" response back
   private void forwardData(JSONObject received, DatagramChannel receivedOn) throws Exception {
     JSONObject toSend;
     DatagramChannel sendOn;
@@ -204,6 +214,7 @@ class Router {
     NetUtil.sendMessage(toSend, sendOn);
   }
 
+  //Sends the routing table to the neighbor that requested the dump
   private void handleDump(DatagramChannel dc) throws Exception {
     JSONObject toSend = new JSONObject();
     toSend.put("type", "table");
@@ -218,6 +229,7 @@ class Router {
     NetUtil.sendMessage(toSend, dc);
   }
 
+  //Forwards the update.withdraw message to the appropriate neighbors
   private void forwardUpdateWithdraw(JSONObject update, DatagramChannel dc) throws Exception {
 
     //Build Forward Message:
@@ -274,18 +286,23 @@ class Router {
 
 
 
+//Stores a collection of routes and determines which route should be used to reach a destination IP
 class RoutingTable{
 
+  //List of routes
   public final ArrayList<Route> routes = new ArrayList<>();
+  //List of all messages
   public final ArrayList<JSONObject> messages = new ArrayList<>();
 
   public RoutingTable(){}
 
+  //Adds the update/withdraw message
   public void addMessage(JSONObject received) throws Exception {
     this.messages.add(received);
     this.buildRoutes();
   }
 
+  //Builds the routing table from the stored messages
   private void buildRoutes() throws Exception {
     this.routes.clear();
     for(JSONObject msg : this.messages){
@@ -294,6 +311,7 @@ class RoutingTable{
 //    this.aggregate();
   }
 
+  //Aggregate the routing table
   private void aggregate(){
     ArrayList<Route> toRemove = new ArrayList<>();
     ArrayList<Route> toAdd = new ArrayList<>();
@@ -309,7 +327,7 @@ class RoutingTable{
         }
 
         for(Route r2 : this.routes){
-          Optional<Route> optAgg = Route.aggregate(r1, r2);
+          Optional<Route> optAgg = aggregateRoutes(r1, r2);
 
           if(optAgg.isPresent()){
             toRemove.add(r1);
@@ -324,6 +342,23 @@ class RoutingTable{
     }
   }
 
+  //Aggregate the two routes if possible
+  public static Optional<Route> aggregateRoutes(Route r1, Route r2){
+
+
+
+    boolean otherSame = (r1.peer.equals(r2.peer)
+            && r1.localPref == r2.localPref
+            && r1.selfOrigin == r2.selfOrigin
+            && r1.asPath.equals(r2.asPath)
+            && r1.origin.equals(r2.origin));
+
+
+
+    return Optional.empty();
+  }
+
+  //Edit the routing table given an update or withdraw
   public void processMessage(JSONObject received) throws Exception {
     if(received.getString("type").equals("update")){
       this.routes.add(new Route(received));
@@ -334,6 +369,7 @@ class RoutingTable{
     }
   }
 
+  //Remove the routes specified in the withdrawal message form the routing table
   private void handleRouteWithdraw(JSONObject received) throws JSONException {
     String peer = received.getString("src");
     JSONArray msg = received.getJSONArray("msg");
@@ -354,6 +390,7 @@ class RoutingTable{
     }
   }
 
+  //Return table representation of RoutingTable
   public JSONArray getTableJSON() throws JSONException {
     this.aggregate();
     JSONArray ja = new JSONArray();
@@ -363,7 +400,7 @@ class RoutingTable{
     return ja;
   }
 
-  //ToDo: Better algo for choosing route
+  //Given a source destination, find the appropriate route of which to forward data down
   public Optional<String> query(String dstIP, boolean fromCust){
     ArrayList<Route> matches = new ArrayList<>();
 
@@ -496,6 +533,7 @@ class RoutingTable{
 
 }
 
+//Represents a possible route to a network
 class Route{
 
   public String network;
@@ -507,6 +545,7 @@ class Route{
   public String origin;
   public String peerRelation;
 
+  //Manually create a route
   public Route(String network, String netmask, String peer,
                int localPref, boolean selfOrigin, ArrayList<Integer> asPath, String origin){
     this.network = network;
@@ -518,6 +557,7 @@ class Route{
     this.origin = origin;
   }
 
+  //Create a route form its JSON representation
   public Route(JSONObject update) throws JSONException {
     JSONObject msg = update.getJSONObject("msg");
 
@@ -535,6 +575,7 @@ class Route{
     this.origin = msg.getString("origin");
   }
 
+  //Returns the route represented in JSON
   public JSONObject asJSON() throws JSONException {
     JSONObject route = new JSONObject();
     route.put("network", this.network);
@@ -547,6 +588,7 @@ class Route{
     return route;
   }
 
+  //Return true if the route is a viable option to reach the destination
   public boolean containsNetwork(String dstIP){
     int nm = IPAddress.netmaskToInt(this.netmask);
     String binaryNetwork = IPAddress.ipAddressToBinary(this.network);
@@ -558,25 +600,12 @@ class Route{
     return IPAddress.netmaskToInt(this.netmask);
   }
 
-  public static Optional<Route> aggregate(Route r1, Route r2){
-
-
-
-    boolean otherSame = (r1.peer.equals(r2.peer)
-            && r1.localPref == r2.localPref
-            && r1.selfOrigin == r2.selfOrigin
-            && r1.asPath.equals(r2.asPath)
-            && r1.origin.equals(r2.origin));
-
-
-
-    return Optional.empty();
-  }
-
 }
 
+//Used for ip address utility
 class IPAddress{
 
+  //Convert netmask to an int
   // 255.255.255.255 -> 32
   public static int netmaskToInt(String netmask){
     int result = 0;
@@ -593,6 +622,7 @@ class IPAddress{
   }
 
 
+  //Convert ip address string to its binary
   // 255.255.255.255 -> 11111111111111111111111111111111
   public static String ipAddressToBinary(String network) {
 
