@@ -327,18 +327,23 @@ class RoutingTable{
         }
 
         for(Route r2 : this.routes){
-          Optional<Route> optAgg = aggregateRoutes(r1, r2);
+          if(!r1.equals(r2)){
+            Optional<Route> optAgg = aggregateRoutes(r1, r2);
 
-          if(optAgg.isPresent()){
-            toRemove.add(r1);
-            toRemove.add(r2);
-            toAdd.add(optAgg.get());
-            runAgain = true;
+            if(optAgg.isPresent()){
+              toRemove.add(r1);
+              toRemove.add(r2);
+              toAdd.add(optAgg.get());
+              runAgain = true;
+            }
           }
         }
       }
+
       this.routes.removeAll(toRemove);
       this.routes.addAll(toAdd);
+      toRemove.clear();
+      toAdd.clear();
     }
   }
 
@@ -352,16 +357,15 @@ class RoutingTable{
     int nmR2 = IPAddress.netmaskToInt(r2.netmask);
 
 
-//    throw new Exception("failure " + nmR1);
-
     boolean canAgg =
 //            binR1.charAt(nmR1-1) = binR2.charAt(nmR2-1)
-            binR1.substring(0, nmR1-1).equals(binR2.substring(0, nmR2-1))
-            && (r1.peer.equals(r2.peer)
+            r1.peer.equals(r2.peer)
+            && r1.netmask.equals(r2.netmask)
             && r1.localPref == r2.localPref
             && r1.selfOrigin == r2.selfOrigin
             && r1.asPath.equals(r2.asPath)
-            && r1.origin.equals(r2.origin));
+            && r1.origin.equals(r2.origin)
+            && binR1.substring(0, nmR1-1).equals(binR2.substring(0, nmR2-1));
 
 
 
@@ -653,7 +657,7 @@ class IPAddress{
 
     String netmaskBin = IPAddress.ipAddressToBinary(netmask);
     for(int i=0; i<netmaskBin.length(); i++){
-      if(netmaskBin.charAt(i) == (char) 1){
+      if(String.valueOf(netmaskBin.charAt(i)).equals("1")){
         result++;
       }
     }
