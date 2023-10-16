@@ -353,17 +353,30 @@ class RoutingTable{
 
 
     boolean canAgg =
-            binR1.charAt(nmR1-1) == binR2.charAt(nmR2-1)
-            && binR1.substring(0, nmR1-1).equals(binR2.substring(0, nmR2-1))
+//            binR1.charAt(nmR1-1) = binR2.charAt(nmR2-1)
+            binR1.substring(0, nmR1-1).equals(binR2.substring(0, nmR2-1))
             && (r1.peer.equals(r2.peer)
             && r1.localPref == r2.localPref
             && r1.selfOrigin == r2.selfOrigin
             && r1.asPath.equals(r2.asPath)
             && r1.origin.equals(r2.origin));
 
+
+
     if(canAgg){
-      String newNet = null;
-      String newMask = null;
+      String newNet;
+
+      int i1 = Integer.parseInt(String.valueOf(binR1.charAt(nmR1-1)));
+      int i2 = Integer.parseInt(String.valueOf(binR2.charAt(nmR2-1)));
+
+      if(i1 == i2){
+        newNet = binR1.substring(0, nmR1-1) + i1;
+      } else{
+        newNet = binR1.substring(0, nmR1-1) + 0;
+      }
+
+      String newMask = IPAddress.intToNetmask(nmR1-1);
+
       Route newR = new Route(newNet, newMask, r1.peer, r1.peerRelation,
               r1.localPref, r1.selfOrigin, r1.asPath, r1.origin);
       return Optional.of(newR);
@@ -632,6 +645,26 @@ class IPAddress{
       }
     }
     return result;
+  }
+
+  //Convert an int to a netmask
+  public static String intToNetmask(int mask){
+    StringBuilder sb = new StringBuilder();
+
+    for(int i=0; i<mask; i++){
+      sb.append(1);
+    }
+
+    while(sb.length() < 32){
+      sb.append(0);
+    }
+
+    return IPAddress.binaryToIPAddress(sb.toString());
+
+  }
+
+  private static String binaryToIPAddress(String binary) {
+    return null;
   }
 
 
