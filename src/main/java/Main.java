@@ -312,7 +312,7 @@ class RoutingTable{
   }
 
   //Aggregate the routing table
-  private void aggregate(){
+  private void aggregate() throws Exception {
     ArrayList<Route> toRemove = new ArrayList<>();
     ArrayList<Route> toAdd = new ArrayList<>();
 
@@ -343,7 +343,7 @@ class RoutingTable{
   }
 
   //Aggregate the two routes if possible
-  public static Optional<Route> aggregateRoutes(Route r1, Route r2){
+  public static Optional<Route> aggregateRoutes(Route r1, Route r2) throws Exception {
 
     String binR1 = IPAddress.ipAddressToBinary(r1.network);
     String binR2 = IPAddress.ipAddressToBinary(r2.network);
@@ -351,6 +351,8 @@ class RoutingTable{
     int nmR1 = IPAddress.netmaskToInt(r1.netmask);
     int nmR2 = IPAddress.netmaskToInt(r2.netmask);
 
+
+//    throw new Exception("failure " + nmR1);
 
     boolean canAgg =
 //            binR1.charAt(nmR1-1) = binR2.charAt(nmR2-1)
@@ -364,16 +366,22 @@ class RoutingTable{
 
 
     if(canAgg){
-      String newNet;
+      StringBuilder newNetBin = new StringBuilder(binR1.substring(0, nmR1 - 1));
 
       int i1 = Integer.parseInt(String.valueOf(binR1.charAt(nmR1-1)));
       int i2 = Integer.parseInt(String.valueOf(binR2.charAt(nmR2-1)));
 
       if(i1 == i2){
-        newNet = binR1.substring(0, nmR1-1) + i1;
+        newNetBin.append(i1);
       } else{
-        newNet = binR1.substring(0, nmR1-1) + 0;
+        newNetBin.append(0);
       }
+
+      while(newNetBin.length() < 32){
+        newNetBin.append(0);
+      }
+
+      String newNet = IPAddress.binaryToIpAddress(newNetBin.toString());
 
       String newMask = IPAddress.intToNetmask(nmR1-1);
 
@@ -418,7 +426,7 @@ class RoutingTable{
   }
 
   //Return table representation of RoutingTable
-  public JSONArray getTableJSON() throws JSONException {
+  public JSONArray getTableJSON() throws Exception {
     this.aggregate();
     JSONArray ja = new JSONArray();
     for(Route r : this.routes){
@@ -428,7 +436,7 @@ class RoutingTable{
   }
 
   //Given a source destination, find the appropriate route of which to forward data down
-  public Optional<String> query(String dstIP, boolean fromCust){
+  public Optional<String> query(String dstIP, boolean fromCust) throws Exception {
     ArrayList<Route> matches = new ArrayList<>();
 
     int bestNetmask = 0;
@@ -615,16 +623,23 @@ class Route{
   }
 
   //Return true if the route is a viable option to reach the destination
-  public boolean containsNetwork(String dstIP){
+  public boolean containsNetwork(String dstIP) throws Exception {
     int nm = IPAddress.netmaskToInt(this.netmask);
     String binaryNetwork = IPAddress.ipAddressToBinary(this.network);
     String binaryDst = IPAddress.ipAddressToBinary(dstIP);
     return binaryNetwork.startsWith(binaryDst.substring(0, nm));
   }
 
-  public int getNetmaskInt(){
+  public int getNetmaskInt() throws Exception {
     return IPAddress.netmaskToInt(this.netmask);
   }
+
+//  public String toString(){
+//    StringBuilder sb = new StringBuilder();
+//    sb.append(this.network);
+//
+//    return sb;
+//  }
 
 }
 
@@ -633,15 +648,13 @@ class IPAddress{
 
   //Convert netmask to an int
   // 255.255.255.255 -> 32
-  public static int netmaskToInt(String netmask){
+  public static int netmaskToInt(String netmask) throws Exception {
     int result = 0;
-    String[] netmaskSplit = netmask.split("\\.");
-    for(int i=0; i<netmaskSplit.length; i++){
-      int n = Integer.parseInt(netmaskSplit[i]);
-      String bn = Integer.toBinaryString(n);
-      while(bn.startsWith("1")){
+
+    String netmaskBin = IPAddress.ipAddressToBinary(netmask);
+    for(int i=0; i<netmaskBin.length(); i++){
+      if(netmaskBin.charAt(i) == (char) 1){
         result++;
-        bn = bn.substring(1);
       }
     }
     return result;
@@ -659,13 +672,10 @@ class IPAddress{
       sb.append(0);
     }
 
-    return IPAddress.binaryToIPAddress(sb.toString());
+    return IPAddress.binaryToIpAddress(sb.toString());
 
   }
 
-  private static String binaryToIPAddress(String binary) {
-    return null;
-  }
 
 
   //Convert ip address string to its binary
