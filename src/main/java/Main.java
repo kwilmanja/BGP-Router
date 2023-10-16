@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -37,42 +36,29 @@ public class Main {
   }
 
 
-
-  public static class NetUtil {
-
-    public static JSONObject receiveMessage(DatagramChannel dc) throws IOException, JSONException {
-      ByteBuffer buffer = ByteBuffer.allocate(1024);
-      buffer.clear();
-
-      SocketAddress senderAddress = dc.receive(buffer);
-
-      buffer.flip();
-      byte[] data = new byte[buffer.limit()];
-      buffer.get(data);
-
-      String messageStr = new String(data, StandardCharsets.UTF_8);
-      System.out.println("Received from " + senderAddress + ": " + messageStr);
-      return new JSONObject(messageStr);
-    }
-
-    public static void sendMessage(JSONObject msg, DatagramChannel dc) throws IOException {
-      byte[] messageBytes = msg.toString().getBytes(StandardCharsets.UTF_8);
-      ByteBuffer buffer = ByteBuffer.wrap(messageBytes);
-      dc.write(buffer);
-    }
-
-  }
-
-
 }
 
-enum Relation {
-  CUST,
-  PEER,
-  PROV;
+class NetUtil {
 
-  public static Relation of(String type){
-    return Relation.valueOf(type.toUpperCase(Locale.ROOT));
+  public static JSONObject receiveMessage(DatagramChannel dc) throws IOException, JSONException {
+    ByteBuffer buffer = ByteBuffer.allocate(1024);
+    buffer.clear();
+
+    SocketAddress senderAddress = dc.receive(buffer);
+
+    buffer.flip();
+    byte[] data = new byte[buffer.limit()];
+    buffer.get(data);
+
+    String messageStr = new String(data, StandardCharsets.UTF_8);
+    System.out.println("Received from " + senderAddress + ": " + messageStr);
+    return new JSONObject(messageStr);
+  }
+
+  public static void sendMessage(JSONObject msg, DatagramChannel dc) throws IOException {
+    byte[] messageBytes = msg.toString().getBytes(StandardCharsets.UTF_8);
+    ByteBuffer buffer = ByteBuffer.wrap(messageBytes);
+    dc.write(buffer);
   }
 
 }
@@ -85,7 +71,7 @@ class Router {
   private final Selector selector = Selector.open();
 
   private final Map<String, DatagramChannel> channels = new HashMap<>();
-  private final Map<String, Relation> relations = new HashMap<>();
+  private final Map<String, String> relations = new HashMap<>();
   private final ArrayList<String> networks = new ArrayList<>();
 
   private RoutingTable routeTable;
@@ -101,7 +87,7 @@ class Router {
       String ip = strs[1];
       int port = Integer.parseInt(strs[0]);
 
-      this.relations.put(ip, Relation.of(strs[2]));
+      this.relations.put(ip, strs[2]);
       DatagramChannel dc = DatagramChannel.open();
       dc.connect(new InetSocketAddress(InetAddress.getByName("localhost"), port));
       this.channels.put(ip, dc);
@@ -127,7 +113,7 @@ class Router {
       handshake.put("type", "handshake");
       handshake.put("msg", new JSONObject());
 
-      Main.NetUtil.sendMessage(handshake, this.channels.get(ip));
+      NetUtil.sendMessage(handshake, this.channels.get(ip));
     }
   }
 
@@ -162,15 +148,14 @@ class Router {
 
         if (selectedKey.isReadable()) {
           DatagramChannel dc = (DatagramChannel) selectedKey.channel();
-          JSONObject received = Main.NetUtil.receiveMessage(dc);
+          JSONObject received = NetUtil.receiveMessage(dc);
 
           switch (received.getString("type")){
             case "update":
             case "withdraw":
               this.forwardUpdateWithdraw(received, dc);
-//              String ip = this.getIPFromChannel(dc);
-//              received.put("peer", ip);
-//              received.put("peerRelation", this.relations.get(ip));
+              String ip = this.getIPFromChannel(dc);
+              received.put("peerRelation", this.relations.get(ip));
               this.routeTable.addMessage(received);
               break;
             case "data":
@@ -190,13 +175,17 @@ class Router {
     }
   }
 
+  private boolean isCust(String ip){
+    return this.relations.get(ip).equals("cust");
+  }
+
   //ToDo: Check if it is a legal route to send on
-  private void forwardData(JSONObject received, DatagramChannel receivedOn) throws JSONException, IOException {
+  private void forwardData(JSONObject received, DatagramChannel receivedOn) throws Exception {
     JSONObject toSend;
     DatagramChannel sendOn;
 
     String dstIP = received.getString("dst");
-    Optional<String> peerIP = this.routeTable.query(dstIP);
+    Optional<String> peerIP = this.routeTable.query(dstIP, isCust(this.getIPFromChannel(receivedOn)));
 
     if(peerIP.isPresent()){
       // a route was found to forward the data
@@ -212,7 +201,7 @@ class Router {
       sendOn = receivedOn;
     }
 
-    Main.NetUtil.sendMessage(toSend, sendOn);
+    NetUtil.sendMessage(toSend, sendOn);
   }
 
   private void handleDump(DatagramChannel dc) throws Exception {
@@ -226,7 +215,7 @@ class Router {
     JSONArray msg = this.routeTable.getTableJSON();
     toSend.put("msg", msg);
 
-    Main.NetUtil.sendMessage(toSend, dc);
+    NetUtil.sendMessage(toSend, dc);
   }
 
   private void forwardUpdateWithdraw(JSONObject update, DatagramChannel dc) throws Exception {
@@ -262,18 +251,18 @@ class Router {
     //Send Forward Message:
 
     String originIP = this.getIPFromChannel(dc);
-    Relation originR = this.relations.get(originIP);
+    String originR = this.relations.get(originIP);
 
     for(String ip : this.networks){
 
-      Relation r = this.relations.get(ip);
+      String r = this.relations.get(ip);
       DatagramChannel sendOn = this.channels.get(ip);
 
       if (!ip.equals(originIP) &&
-              (originR.equals(Relation.CUST) || r.equals(Relation.CUST))){
+              (originR.equals("cust") || r.equals("cust"))){
         toSend.put("src", this.getOurIP(ip));
         toSend.put("dst", ip);
-        Main.NetUtil.sendMessage(toSend, sendOn);
+        NetUtil.sendMessage(toSend, sendOn);
       }
     }
 
@@ -291,6 +280,33 @@ class RoutingTable{
   public final ArrayList<JSONObject> messages = new ArrayList<>();
 
   public RoutingTable(){}
+
+  public void addMessage(JSONObject received) throws Exception {
+    this.messages.add(received);
+    this.buildRoutes();
+  }
+
+  private void buildRoutes() throws Exception {
+    this.routes.clear();
+    for(JSONObject msg : this.messages){
+      this.processMessage(msg);
+    }
+    this.aggregate();
+  }
+
+  private void aggregate(){
+    //ToDo
+  }
+
+  public void processMessage(JSONObject received) throws Exception {
+    if(received.getString("type").equals("update")){
+      this.routes.add(new Route(received));
+    } else if(received.getString("type").equals("withdraw")){
+      this.handleRouteWithdraw(received);
+    } else{
+      throw new Exception("message not an update or withdraw");
+    }
+  }
 
   private void handleRouteWithdraw(JSONObject received) throws JSONException {
     String peer = received.getString("src");
@@ -312,19 +328,6 @@ class RoutingTable{
     }
   }
 
-  //ToDo: update routing table better
-  public void addMessage(JSONObject received) throws Exception {
-    this.messages.add(received);
-    if(received.getString("type").equals("update")){
-      this.routes.add(new Route(received));
-    } else if(received.getString("type").equals("withdraw")){
-      this.handleRouteWithdraw(received);
-    } else{
-      throw new Exception("message not an update or withdraw");
-
-    }
-  }
-
   public JSONArray getTableJSON() throws JSONException {
     JSONArray ja = new JSONArray();
     for(Route r : this.routes){
@@ -334,13 +337,13 @@ class RoutingTable{
   }
 
   //ToDo: Better algo for choosing route
-  public Optional<String> query(String dstIP){
+  public Optional<String> query(String dstIP, boolean fromCust){
     ArrayList<Route> matches = new ArrayList<>();
 
     int bestNetmask = 0;
 
     for(Route r : this.routes){
-      if(r.containsNetwork(dstIP)){
+      if(r.containsNetwork(dstIP) && (fromCust || r.peerRelation.equals("cust"))){
         int rNetmask = r.getNetmaskInt();
         if(rNetmask == bestNetmask){
           matches.add(r);
@@ -352,6 +355,10 @@ class RoutingTable{
       }
     }
 
+
+
+
+    //return if 0 or 1 matches
     if(matches.isEmpty()){
       return Optional.empty();
     } else if(matches.size() == 1){
@@ -384,7 +391,7 @@ class RoutingTable{
 
     //SELF ORIGIN
     for(Route r : matches){
-      if(r.selfOrigin == true){
+      if(r.selfOrigin){
         bestMatch.add(r);
       }
     }
@@ -460,7 +467,6 @@ class RoutingTable{
     return Optional.empty();
   }
 
-
 }
 
 class Route{
@@ -472,6 +478,7 @@ class Route{
   public boolean selfOrigin;
   public ArrayList<Integer> asPath;
   public String origin;
+  public String peerRelation;
 
   public Route(String network, String netmask, String peer,
                int localPref, boolean selfOrigin, ArrayList<Integer> asPath, String origin){
@@ -490,6 +497,7 @@ class Route{
     this.network = msg.getString("network");
     this.netmask = msg.getString("netmask");
     this.peer = update.getString("src");
+    this.peerRelation = update.getString("peerRelation");
     this.localPref = msg.getInt("localpref");
     this.selfOrigin = msg.getBoolean("selfOrigin");
     this.asPath = new ArrayList<>();
