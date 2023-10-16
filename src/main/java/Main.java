@@ -442,10 +442,10 @@ class RoutingTable{
     bestMatch = new ArrayList<>();
 
     // LowestIP
-    int lowestIP = Integer.parseInt(IPAddress.ipAddressToBinary(matches.get(0).peer), 2);
+    long lowestIP = Long.parseLong(IPAddress.ipAddressToBinary(matches.get(0).peer), 2);
 
     for(Route r : matches){
-      int currIP = Integer.parseInt(IPAddress.ipAddressToBinary(r.peer), 2);
+      long currIP = Long.parseLong(IPAddress.ipAddressToBinary(r.peer), 2);
       if(currIP < lowestIP || currIP == lowestIP){
         bestMatch = new ArrayList<>();
         bestMatch.add(r);
