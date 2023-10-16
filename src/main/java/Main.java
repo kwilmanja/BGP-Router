@@ -291,11 +291,37 @@ class RoutingTable{
     for(JSONObject msg : this.messages){
       this.processMessage(msg);
     }
-    this.aggregate();
+//    this.aggregate();
   }
 
   private void aggregate(){
-    //ToDo
+    ArrayList<Route> toRemove = new ArrayList<>();
+    ArrayList<Route> toAdd = new ArrayList<>();
+
+    boolean runAgain = true;
+    while(runAgain){
+      runAgain = false;
+
+      for(Route r1 : this.routes){
+
+        if(toRemove.contains(r1)){
+          continue;
+        }
+
+        for(Route r2 : this.routes){
+          Optional<Route> optAgg = Route.aggregate(r1, r2);
+
+          if(optAgg.isPresent()){
+            toRemove.add(r1);
+            toRemove.add(r2);
+            toAdd.add(optAgg.get());
+            runAgain = true;
+          }
+        }
+      }
+      this.routes.removeAll(toRemove);
+      this.routes.addAll(toAdd);
+    }
   }
 
   public void processMessage(JSONObject received) throws Exception {
@@ -329,6 +355,7 @@ class RoutingTable{
   }
 
   public JSONArray getTableJSON() throws JSONException {
+    this.aggregate();
     JSONArray ja = new JSONArray();
     for(Route r : this.routes){
       ja.put(r.asJSON());
@@ -531,6 +558,21 @@ class Route{
     return IPAddress.netmaskToInt(this.netmask);
   }
 
+  public static Optional<Route> aggregate(Route r1, Route r2){
+
+
+
+    boolean otherSame = (r1.peer.equals(r2.peer)
+            && r1.localPref == r2.localPref
+            && r1.selfOrigin == r2.selfOrigin
+            && r1.asPath.equals(r2.asPath)
+            && r1.origin.equals(r2.origin));
+
+
+
+    return Optional.empty();
+  }
+
 }
 
 class IPAddress{
@@ -550,7 +592,7 @@ class IPAddress{
     return result;
   }
 
-  //ToDo
+
   // 255.255.255.255 -> 11111111111111111111111111111111
   public static String ipAddressToBinary(String network) {
 
